@@ -45,7 +45,7 @@ fi
 
 export FAKECHROOT_EXCLUDE_PATH
 # TODO using 'sh' for this is ugly (and sh isn't guaranteed to work in the chroot)
-fakechroot -- chroot "$HAI_UNION" sh -c 'cd "$1"; shift; exec "$@"' - "$PWD" "$@"
+LD_LIBRARY_PATH="$HOME/.hai/bootstrap" fakechroot -- chroot "$HAI_UNION" sh -c 'cd "$1"; shift; exec "$@"' - "$PWD" "$@"
 result=$?
 sleep .2   # workaround that attempts to reduce 'device is busy' errors
 if [ -z "$HAI_KEEP_UNION" ]; then
