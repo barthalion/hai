@@ -1,0 +1,55 @@
+#!/bin/bash
+
+set -e
+
+source "${HAICONFIG:-`dirname "$0"`/config}"
+[ -r "$HOME/.hai/config" ] && source "$HOME/.hai/config"
+
+selection=
+
+request () {
+  echo "selecting $1"
+  local pkg="$1" rule
+  for rule in "${MAP_REQUESTS[@]}"; do [ "${rule%%:*}" == "$1" ] && pkg=${rule#*:}; done
+  pkg="$("`dirname "$0"`/get" "$pkg" "$selection")" || exit 1
+  [ "$pkg" ] || return 0
+  touch "$pkg" || true   # update the package's "last requested" time
+  for dep in `grep ^depend "$pkg/.PKGINFO" | cut -b10-`; do request $dep; done
+  selection+=$pkg:
+}
+
+[ "$1" == "--help" ] && [ "$#" -eq 1 ] && shift
+[ "$#" -eq 0 ] && echo "usage: $0 [--upgrade] <packages> -- <command>" && exit 1
+upgrade=; [ "$1" == "--upgrade" ] && shift && upgrade=t
+[ "$#" -eq 1 ] && [ "$1" == "${1#-}" ] && set -- "$1" -- "$1"
+for arg; do
+  [ "$arg" == "--" ] && break
+  [ "${arg#-}" != "$arg" ] && echo "invalid option: $arg" && exit 1
+  [ "${arg//[-A-Za-z0-9_<=>+.]}" ] && echo "invalid character in: $arg" && exit 1
+done
+[ "$upgrade" ] && rm -rf "$HAISYNCBAK" && [ -d "$HAISYNC" ] && mv "$HAISYNC" "$HAISYNCBAK"
+while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do request "$1"; shift; done
+[ "$#" -le 1 ] && exit 0   # 'download only' mode (no command)
+shift
+
+[ "$HAI_UNION" ] && mkdir -p "$HAI_UNION"
+[ -z "$HAI_UNION" ] && mkdir -p "$HAIUNIONS" && HAI_UNION=`mktemp -d "$HAIUNIONS/XXXXXXXX"`
+
+set +e
+unionfs -o cow "${selection//:/=ro:}/=rw" "$HAI_UNION"
+result=$?
+if [ "$result" -ne 0 ]; then
+  [ -z "$HAI_KEEP_UNION" ] && rmdir "$HAI_UNION"
+  exit $result
+fi
+
+export FAKECHROOT_EXCLUDE_PATH
+# TODO using 'sh' for this is ugly (and sh isn't guaranteed to work in the chroot)
+fakechroot -- chroot "$HAI_UNION" sh -c 'cd "$1"; shift; exec "$@"' - "$PWD" "$@"
+result=$?
+sleep .2   # workaround that attempts to reduce 'device is busy' errors
+if [ -z "$HAI_KEEP_UNION" ]; then
+  fusermount -u "$HAI_UNION"
+  rmdir "$HAI_UNION"
+fi
+exit $result
