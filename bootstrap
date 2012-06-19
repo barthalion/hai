@@ -16,7 +16,7 @@ if ! type -t fakechroot >/dev/null || [ "`fakechroot sh -c 'echo $FAKECHROOT_VER
   cd fakechroot
   source PKGBUILD
   wget "${source[0]}"
-  tar xf fakechroot_$pkgver.orig.tar.gz
+  tar xf fakechroot-$pkgver.tar.gz
   srcdir=$PWD
   build
   cd $srcdir/fakechroot-$pkgver
