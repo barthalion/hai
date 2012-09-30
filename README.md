@@ -19,7 +19,7 @@ Some programs HAI uses aren't commonly installed:
 
 * [fakechroot](https://github.com/fakechroot/fakechroot/wiki): pretends some directory is actually the filesystem root.
 * [unionfs-fuse](http://podgorny.cz/moin/UnionFsFuse): merges directories (creates an union) without root privileges.
-* [vercmp](https://www.archlinux.org/pacman/): compares versions. (unfortunately majority of distributions haven't pacman in repositories)
+* [vercmp](https://projects.archlinux.org/pacman.git/tree/src/util/vercmp.c): compares versions.
 
 Because the point of `hai` is avoiding changes to the local system, you can
 use `bootstrap` to install these programs into `~/.hai/bootstrap`. It won't do
