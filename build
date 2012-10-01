@@ -1,15 +1,21 @@
-#!/bin/bash
-
+#!/usr/bin/env bash 
 set -e
 
-source "${HAICONFIG:-`dirname "$0"`/config}"
-[ -r "$HOME/.hai/config" ] && source "$HOME/.hai/config"
+if [[ "$#" != 0 ]] && [[ "$1" != "--" ]]; then
+	echo "usage: $0 [<input-dir>] [-- <makepkg-opts>]"
+	exit 1
+fi
 
-oldpwd=$PWD; cd "`dirname "$0"`"; haibin=$PWD; cd "$oldpwd"
-if [ "$1" ] && [ "$1" == "${1#-}" ]; then cd "$1"; shift; fi
-[ "$#" != 0 ] && [ "$1" != "--" ] && echo "usage: $0 [<input-dir>] [-- <makepkg-opts>]" && exit 1
-[ "$1" == "--" ] && shift
+source "${HAICONFIG:-$(dirname "$0")/config}"
+[[ -r "$HAI/config" ]] && source "$HAI/config"
+
+oldpwd="$PWD"; cd "$(dirname "$0")"; haibin="$PWD"; cd "$oldpwd"
+
+if [[ "$1" ]] && [[ "$1" == "${1#-}" ]]; then
+  cd "$1"
+  shift
+fi
+[[ "$1" == "--" ]] && shift
 
 source ./PKGBUILD
 "$haibin/hai" pacman "${depends[@]}" "${makedepends[@]}" -- makepkg -d "$@"
-
