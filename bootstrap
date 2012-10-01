@@ -1,43 +1,33 @@
-#!/bin/bash
+#!/usr/bin/env bash -e
 
-set -e
+[[ "$HAIBOOTSTRAP" ]] || HAIBOOTSTRAP=$HOME/.hai/bootstrap
 
-[ "$HAIBOOTSTRAP" ] || HAIBOOTSTRAP=$HOME/.hai/bootstrap
-
-[ "$#" -gt "0" ] && echo "usage: $0" && exit 1
-
-if ! type -t fakechroot >/dev/null || [ "`fakechroot sh -c 'echo $FAKECHROOT_VERSION'`" = "2.9" ]; then
-  # NOTE: fakechroot-2.9 contains a bug that makes gcc, gdb and other apps
-  # crash (debian #577706). this installs a work around. ideally this will
-  # get fixed upstream soon, but fakechroot isn't very actively maintained.
+if [[ -z $(type -t fakechroot) ]]; then
   mkdir -p "$HAIBOOTSTRAP"
-  cd "`mktemp -d`"
-  rsync -av rsync.archlinux.org::abs/i686/extra/fakechroot .
-  cd fakechroot
-  source PKGBUILD
-  wget "${source[0]}"
-  tar xf fakechroot-$pkgver.tar.gz
-  srcdir=$PWD
-  build
-  cd $srcdir/fakechroot-$pkgver
+  cd $(mktemp -d)
+  ver=$(wget -qO- https://github.com/fakechroot/fakechroot/downloads | grep Release | head -n1 | cut -d' ' -f11)
+  wget https://github.com/downloads/fakechroot/fakechroot/fakechroot-$ver.tar.gz
+  tar xf fakechroot-$ver.tar.gz
+  cd fakechroot-$ver
+  ./configure --prefix=/usr --libdir=/usr/lib/libfakeroot --sysconfdir=/etc
+  make
   cp src/.libs/libfakechroot.so "$HAIBOOTSTRAP"
-  sed -i 's@^PATHS=/.*@PATHS=`dirname "$0"`@' scripts/fakechroot
-  sed -i 's@^export FAKECHROOT_VERSION$@#&   # bug #577706 workaround@' scripts/fakechroot
   cp scripts/fakechroot "$HAIBOOTSTRAP"
 fi
 
-if ! type -t unionfs >/dev/null; then
+if [[ -z $(type -t unionfs) ]]; then
   mkdir -p "$HAIBOOTSTRAP"
-  cd "`mktemp -d`"
-  ver=`wget -O- http://podgorny.cz/moin/UnionFsFuse | grep -o 'Latest version: [^ ]*' | head -n1 | grep -o '[^ ]*$'`
+  cd $(mktemp -d)
+  ver=$(wget -qO- http://podgorny.cz/moin/UnionFsFuse | grep -o 'Latest version: [^ ]*' | head -n1 | grep -o '[^ ]*$')
   wget http://podgorny.cz/unionfs-fuse/releases/unionfs-fuse-$ver.tar.bz2
   tar xf unionfs-fuse-$ver.tar.bz2
-  cd unionfs-fuse-*/
+  cd unionfs-fuse-$ver/
   make
   cp src/unionfs "$HAIBOOTSTRAP"
 fi
 
-if ! type -t vercmp >/dev/null; then
+if [[ -z $(type -t vercmp)]]; then
+  # TODO: building vercmp doesn't work at all; find out why OR build own implementation in pure C/Bash
   mkdir -p "$HAIBOOTSTRAP"
   cd "`mktemp -d`"
   echo >vercmp.c '#include <stdio.h>
@@ -50,11 +40,10 @@ if ! type -t vercmp >/dev/null; then
   cp vercmp "$HAIBOOTSTRAP"
 fi
 
-if ! type -t bsdtar >/dev/null; then
-  # TODO install bsdtar (get all the deps, preferably create a static binary)
+if [[ -z $(type -t bsdtar) ]]; then
+  # TODO: get all the deps and build static bsdtar binary
   echo
   echo "HAI needs bsdtar, which you don't have. bootstrap can't install bsdtar"
   echo "yet. You're on your own there. :-("
   echo
 fi
-
