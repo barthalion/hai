@@ -1,9 +1,10 @@
-#!/usr/bin/env bash -e
+#!/usr/bin/env bash
+set -e
 
 [[ "$HAIBOOTSTRAP" ]] || HAIBOOTSTRAP=$HOME/.hai/bootstrap
+mkdir -p "$HAIBOOTSTRAP"
 
 if [[ -z $(type -t fakechroot) ]]; then
-  mkdir -p "$HAIBOOTSTRAP"
   cd $(mktemp -d)
   ver=$(wget -qO- https://github.com/fakechroot/fakechroot/downloads | grep Release | head -n1 | cut -d' ' -f11)
   wget https://github.com/downloads/fakechroot/fakechroot/fakechroot-$ver.tar.gz
@@ -16,7 +17,6 @@ if [[ -z $(type -t fakechroot) ]]; then
 fi
 
 if [[ -z $(type -t unionfs) ]]; then
-  mkdir -p "$HAIBOOTSTRAP"
   cd $(mktemp -d)
   ver=$(wget -qO- http://podgorny.cz/moin/UnionFsFuse | grep -o 'Latest version: [^ ]*' | head -n1 | grep -o '[^ ]*$')
   wget http://podgorny.cz/unionfs-fuse/releases/unionfs-fuse-$ver.tar.bz2
@@ -27,16 +27,10 @@ if [[ -z $(type -t unionfs) ]]; then
 fi
 
 if [[ -z $(type -t vercmp)]]; then
-  # TODO: building vercmp doesn't work at all; find out why OR build own implementation in pure C/Bash
-  mkdir -p "$HAIBOOTSTRAP"
-  cd "`mktemp -d`"
-  echo >vercmp.c '#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>'
-  wget -O- http://projects.archlinux.org/pacman.git/plain/lib/libalpm/package.c | sed -n 's/SYMEXPORT\|ALPM_LOG_FUNC//;/^int.*vercmp/,/^}$/p' >>vercmp.c
-  wget -O- http://projects.archlinux.org/pacman.git/plain/src/util/vercmp.c | sed '/^#include/d;' >>vercmp.c
-  gcc -o vercmp vercmp.c
+  cd $(mktemp -d)
+  wget -q http://projects.archlinux.org/pacman.git/plain/lib/libalpm/{alpm.h,alpm_list.h,backup.h,db.h,handle.h,package.h,pkghash.h,signing.h,util.h,version.c}
+  wget -q http://projects.archlinux.org/pacman.git/plain/src/util/vercmp.c
+  gcc -static version.c vercmp.c -o vercmp
   cp vercmp "$HAIBOOTSTRAP"
 fi
 
