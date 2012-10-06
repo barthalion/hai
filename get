@@ -1,11 +1,9 @@
-#!/bin/bash
-
+#!/usr/bin/env bash
 set -e
-
-source "${HAICONFIG:-`dirname "$0"`/config}"
-[ -r "$HOME/.hai/config" ] && source "$HOME/.hai/config"
-
 shopt -s nullglob
+
+source "${HAICONFIG:-$(dirname "$0")/config}"
+[[ -r "$HAI/config" ]]] && source "$HAI/config"
 
 # usage: get <request> <already-selected>
 # output: a directory path with the package's unpacked contents
@@ -19,34 +17,34 @@ requestcmp=${requestver%%[^<=>]*}
 requestver=${requestver:${#requestcmp}}
 
 version-ok () {
-  [ "$requestver" ] || return 0
-  expr "`vercmp "$1" "$requestver"`" "$requestcmp" 0 >/dev/null && return 0 || return 1
+  [[ "$requestver" ]] || return 0
+  expr "`vercmp "$1" "$requestver"`" "$requestcmp" 0 >/dev/null || return 1
 }
 
 filename-ok () {
   local pkg name
   pkg=${1%.pkg.*}
   name=${pkg%-*-*-*}
-  [ "$name" == "$requestname" ] || return 1
+  [[ "$name" == "$requestname" ]] || return 1
   ver=${pkg#"$name"}
-  version-ok "${pkg#"$name"}" && return 0 || return 1
+  version-ok "${pkg#"$name"}" || return 1
 }
 
 find-provider () {
   local found line
-  [ "$#" == 0 ] && return
+  [[ "$#" == 0 ]] && return
   # if this was a grep|while pipeline, 'return' wouldn't work
   # use '|| true' to protect against grep's "not found" exit status
-  found=`grep -l '^\(provides\|pkgname\) = '"$requestname"'\([<=>]\|$\)' "$@" || true`
+  found=$(grep -l '^\(provides\|pkgname\) = '"$requestname"'\([<=>]\|$\)' "$@" || true)
   while read line; do
-    [ "$line" ] && version-ok "`grep '^pkgver' "$line" | cut -b10-`" && echo "${line%/.PKGINFO}" && return
+    [[ "$line" ]] && version-ok "$(grep '^pkgver' "$line" | cut -b10-)" && echo "${line%/.PKGINFO}" && return
     true   # make sure the while loop has a zero exit status
   done <<<"$found"
 }
 
 check-cache () {
   local base="${1##*/}"; base=${base%.pkg.*}
-  if [ -d "$HAICACHE/$base" ]; then echo >&3 "$HAICACHE/$base"; exit 0; fi
+  if [[ -d "$HAICACHE/$base" ]]; then echo >&3 "$HAICACHE/$base"; exit 0; fi
 }
 extract-pkg () {
   local base="${1##*/}"; base=${base%.pkg.*}
@@ -58,24 +56,24 @@ try-override-directory () {
   local pkg
   for pkg in "$1/$requestname-"*/ "$1/$requestname-"*.pkg.*; do
     filename-ok "${pkg##*/}" || continue
-    if [ -d "$pkg" ]; then
+    if [[ -d "$pkg" ]]; then
       mkdir -p "$HAICACHE"
       ln -s "$pkg" "$HAICACHE"
       echo >&3 "$HAICACHE/${pkg##*/}"
       exit 0
     fi
-    if [ -f "$pkg" ]; then extract-pkg "$pkg"; check-cache "$pkg"; fi
+    [[ -f "$pkg" ]] && extract-pkg "$pkg" && check-cache "$pkg"
   done
 }
 
 try-system-package-check () {
-  [ "$1" ] || return 0
+  [[ "$1" ]] || return 0
   local renamed="$requestname" oldname="$requestname" check="$1"; shift
   for config in "$@"; do
-    [ "$config" == "!$requestname" ] && return 0
-    [ "$config" == "$requestname" ] && exit 0
-    [ "${config#"$requestname:"}" != "$config" ] && renamed=${config#"$requestname:"}
-    if [ "${config#"$requestname="}" != "$config" ]; then
+    [[ "$config" == "!$requestname" ]] && return 0
+    [[ "$config" == "$requestname" ]] && exit 0
+    [[ "${config#"$requestname:"}" != "$config" ]] && renamed=${config#"$requestname:"}
+    if [[ "${config#"$requestname="}" != "$config" ]]; then
       # exit 0 == stop trying strategies. return 0 == strategy unsuccessful.
       version-ok "${config#"$requestname="}" && exit 0 || return 0
     fi
@@ -90,68 +88,76 @@ try-mirror () {
   url=${2%/}/; url=${url//@REPO@/"$1"}
   db="$HAISYNC/$1.db.tar.gz"
   mkdir -p "$HAISYNC"
-  [ -f "$db" ] || wget "$url$1.db.tar.gz" -O "$db" -nv
-  found=`bsdtar tf "$db" | grep "^$requestname-[^-/]*-[^-/]*/$" | head -n1`
+  [[ -f "$db" ]] || wget "$url$1.db.tar.gz" -O "$db" -nv
+  found=$(bsdtar tf "$db" | grep "^$requestname-[^-/]*-[^-/]*/$" | head -n1)
   found=${found%/}
-  [ "$found" ] && ! version-ok "${found#"$requestname-"}" && found=
-  [ -z "$found" ] && return
-  local pkg="`bsdtar xOf "$db" "$found/desc" | grep 'pkg\.tar\.' | head -n1`"
-  local md5sum="`bsdtar xOf "$db" "$found/desc" | grep -A1 '^%MD5SUM%$' | tail -n1`"
+  [[ "$found" ]] && ! version-ok "${found#"$requestname-"}" && found=
+  [[ -z "$found" ]] && return
+  local pkg="$(bsdtar xOf "$db" "$found/desc" | grep 'pkg\.tar\.' | head -n1)"
+  local md5sum="$(bsdtar xOf "$db" "$found/desc" | grep -A1 '^%MD5SUM%$' | tail -n1)"
   check-cache "$pkg"
-  for cache in "${LOCAL_CACHE[@]}"; do if [ -f "$cache/$pkg" ]; then
-    [ "$md5sum" ] && [ "`md5sum "$cache/$pkg" | head -c32`" != "$md5sum" ] && continue
-    extract-pkg "$cache/$pkg"
-    check-cache "$pkg"
-  fi; done
-  local dest="`mktemp "${TMPDIR:-/tmp}/$pkg.XXXXX"`"
+  for cache in "${LOCAL_CACHE[@]}"; do
+    if [[ -f "$cache/$pkg" ]]; then
+      [[ "$md5sum" ]] && [[ "$(md5sum "$cache/$pkg" | head -c32)" != "$md5sum" ]] && continue
+      extract-pkg "$cache/$pkg"
+      check-cache "$pkg"
+    fi
+  done
+  local dest="$(mktemp "${TMPDIR:-/tmp}/$pkg.XXXXX")"
   wget "$url$pkg" -O "$dest"
-  [ "$md5sum" ] && [ "`md5sum "$dest" | head -c32`" != "$md5sum" ] &&
+  [[ "$md5sum" ]] && [[ "$(md5sum "$dest" | head -c32)" != "$md5sum" ]] &&
     echo "package checksum incorrect" && return
   extract-pkg "$dest"
   check-cache "$pkg"
 }
 
 try-aur () {
-  local pkg file reply mybuild mybin
+  local pkg file reply \
+        mybin="$(dirname "$0")" \
+        mybuild="$(mktemp -d)"
+        
   for pkg in $HAISYNC/aur.*; do
     if filename-ok "${pkg##*/aur.}"; then check-cache "${pkg##*/aur.}"; fi
   done
-  if [ "$1" == "--prompt" ]; then
+  if [[ "$1" == "--prompt" ]]; then
     echo
     read -p "Package $request not found. Try AUR? [y/N] " reply
-    [ "$reply" != "y" ] && [ "$reply" != "Y" ] && return 0
+    [[ "$reply" != "y" ]] && [[ "$reply" != "Y" ]] && return 0
   fi
-  mybuild="`mktemp -d`"
-  cd "`dirname "$0"`"; mybin="$PWD"
   cd "$mybuild"
-  wget -nv -O- "http://aur.archlinux.org/packages/$requestname/$requestname.tar.gz" | bsdtar xvf - || return 0
-  if ! [ -f "$requestname/PKGBUILD" ]; then
+  wget -nv -O- "http://aur.archlinux.org/packages/${requestname:0:2}/$requestname/$requestname.tar.gz" | bsdtar xvf - || return 0
+  if [[ ! -f "$requestname/PKGBUILD" ]]; then
     echo
-    echo "Error: $requestname/PKGBUILD not present."
+    echo "Error: $requestname/PKGBUILD not found."
     return 0
   fi
   echo
   echo "Package $requestname downloaded."
   echo "To suspend HAI and inspect its contents using your shell, press ^Z."
-  echo "To inspect just the PKGBUILD and *.install in ${EDITOR:-nano}, press Enter."
+  echo "To inspect just the PKGBUILD and *.install in ${EDITOR:-vi}, press Enter."
   read reply
-  "${EDITOR:-nano}" "$requestname/PKGBUILD"
-  for file in "$requestname"/*.install; do [ -f "$file" ] && "${EDITOR:-nano}" "$file"; done
+  "${EDITOR:-vi}" "$requestname/PKGBUILD"
+  for file in "$requestname"/*.install; do 
+    [[ -f "$file" ]] && "${EDITOR:-vi}" "$file"
+  done
   read -p "Continue build? [Y/n] " reply
-  [ "$reply" != "y" ] && [ "$reply" != "Y" ] && [ "$reply" != "" ] && return 0
+  [[ "$reply" != "y" ]] && [[ "$reply" != "Y" ]] && [[ "$reply" != "" ]] && return 0
   cd "$requestname"
   "$mybin/build"
   for pkg in *.pkg.*; do
-    extract-pkg "$pkg"; touch "$HAISYNC/aur.${pkg#.pkg.*}"
+    extract-pkg "$pkg"
+    touch "$HAISYNC/aur.${pkg#.pkg.*}"
   done
   for pkg in *.pkg.*; do
-    if filename-ok "$pkg"; then check-cache "$pkg"; fi
+    if filename-ok "$pkg"; then
+      check-cache "$pkg"
+    fi
   done
 }
 
 # if current selection already provides the request, exit
 oldIFS=$IFS; IFS=:
-[ "`find-provider ${2//://.PKGINFO:}`" ] && exit 0
+[[ "$(find-provider ${2//://.PKGINFO:})" ]] && exit 0
 IFS=$oldIFS
 
 DOWNLOAD_STRATEGIES
