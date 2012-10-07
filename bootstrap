@@ -19,8 +19,8 @@ fi
 if [[ -z $(type -t unionfs) ]]; then
   cd $(mktemp -d)
   ver=$(wget -qO- http://podgorny.cz/moin/UnionFsFuse | grep -o 'Latest version: [^ ]*' | head -n1 | grep -o '[^ ]*$')
-  wget http://podgorny.cz/unionfs-fuse/releases/unionfs-fuse-$ver.tar.bz2
-  tar xf unionfs-fuse-$ver.tar.bz2
+  wget http://podgorny.cz/unionfs-fuse/releases/unionfs-fuse-$ver.tar.xz
+  tar xf unionfs-fuse-$ver.tar.xz
   cd unionfs-fuse-$ver/
   make
   cp src/unionfs "$HAIBOOTSTRAP"
