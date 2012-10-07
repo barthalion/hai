@@ -26,7 +26,7 @@ if [[ -z $(type -t unionfs) ]]; then
   cp src/unionfs "$HAIBOOTSTRAP"
 fi
 
-if [[ -z $(type -t vercmp)]]; then
+if [[ -z $(type -t vercmp) ]]; then
   cd $(mktemp -d)
   wget -q http://projects.archlinux.org/pacman.git/plain/lib/libalpm/{alpm.h,alpm_list.h,backup.h,db.h,handle.h,package.h,pkghash.h,signing.h,util.h,version.c}
   wget -q http://projects.archlinux.org/pacman.git/plain/src/util/vercmp.c
