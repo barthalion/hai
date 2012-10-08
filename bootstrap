@@ -16,7 +16,7 @@ if [[ -z $(type -t fakechroot) ]]; then
   cp scripts/fakechroot "$HAIBOOTSTRAP"
 fi
 
-if [[ -z $(type -t unionfs) ]]; then
+if [[ -z $(type -t unionfs) ]] && [[ -z $(type -t funionfs) ]]; then
   cd $(mktemp -d)
   ver=$(wget -qO- http://podgorny.cz/moin/UnionFsFuse | grep -o 'Latest version: [^ ]*' | head -n1 | grep -o '[^ ]*$')
   wget http://podgorny.cz/unionfs-fuse/releases/unionfs-fuse-$ver.tar.xz

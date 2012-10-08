@@ -11,6 +11,15 @@ source "${HAICONFIG:-$(dirname "$0")/config}"
 
 declare selection upgrade
 
+if [[ $(type -t funionfs) ]]; then
+  unionfs () {
+    shift 2 # discard "-o cow"
+    dirs="$1"
+    shift 1
+    funionfs none -o dirs="$dirs" "$@"
+  }
+fi
+
 request () {
   local pkg="$1" rule
   echo "selecting $pkg"
