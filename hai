@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
-if [[ $# == 0 ]]] || [[ "$1" == '-h' ]]] || [[ "$1" == '--help' ]]] || [[ "$1" == '--usage' ]]]; then
+if [[ $# == 0 ]] || [[ "$1" == '-h' ]] || [[ "$1" == '--help' ]] || [[ "$1" == '--usage' ]]; then
   echo "usage: $0 [--upgrade] <packages> -- <command>"
   exit 0
 fi
 
 source "${HAICONFIG:-$(dirname "$0")/config}"
-[[ -r "$HAI/config" ]]] && source "$HAI/config"
+[[ -r "$HAI/config" ]] && source "$HAI/config"
 
 declare selection upgrade
 
@@ -15,11 +15,11 @@ request () {
   local pkg="$1" rule
   echo "selecting $pkg"
   for rule in "${MAP_REQUESTS[@]}"; do
-    [[ "${rule%%:*}" == "$1" ]]]
+    [[ "${rule%%:*}" == "$1" ]]
     pkg=${rule#*:}
   done
   pkg="$("$(dirname "$0")/get" "$pkg" "$selection")" || exit 1
-  [[ "$pkg" ]]] || return 0
+  [[ "$pkg" ]] || return 0
   touch "$pkg" || true   # update the package's "last requested" time
   for dep in $(grep ^depend "$pkg/.PKGINFO" | cut -b10-); do
     request $dep
@@ -27,33 +27,33 @@ request () {
   selection+=$pkg:
 }
 
-[[ "$1" == "--upgrade" ]]] && shift && upgrade=y
-[[ "$#" -eq 1 ]]] && [[ "$1" == "${1#-}" ]]] && set -- "$1" -- "$1"
+[[ "$1" == "--upgrade" ]] && shift && upgrade=y
+[[ "$#" -eq 1 ]] && [[ "$1" == "${1#-}" ]] && set -- "$1" -- "$1"
 
 for arg; do
-  [[ "$arg" == "--" ]]] && break
-  [[ "${arg#-}" != "$arg" ]]] && echo "invalid option: $arg" && exit 1
-  [[ "${arg//[-A-Za-z0-9_<=>+.]}" ]]] && echo "invalid character in: $arg" && exit 1
+  [[ "$arg" == "--" ]] && break
+  [[ "${arg#-}" != "$arg" ]] && echo "invalid option: $arg" && exit 1
+  [[ "${arg//[-A-Za-z0-9_<=>+.]}" ]] && echo "invalid character in: $arg" && exit 1
 done
 
-[[ "$upgrade" ]]] && rm -rf "$HAISYNCBAK" && [[ -d "$HAISYNC" ]]] && mv "$HAISYNC" "$HAISYNCBAK"
+[[ "$upgrade" ]] && rm -rf "$HAISYNCBAK" && [[ -d "$HAISYNC" ]] && mv "$HAISYNC" "$HAISYNCBAK"
 
-while [[ "$#" > 0 ]]] && [[ "$1" != "--" ]]]; do
+while [[ "$#" > 0 ]] && [[ "$1" != "--" ]]; do
   request "$1"
   shift
 done
 
-[[ "$#" -le 1 ]]] && exit 0   # 'download only' mode (no command)
+[[ "$#" -le 1 ]] && exit 0   # 'download only' mode (no command)
 shift
 
-[[ "$HAI_UNION" ]]] && mkdir -p "$HAI_UNION"
-[[ -z "$HAI_UNION" ]]] && mkdir -p "$HAIUNIONS" && HAI_UNION=$(mktemp -d "$HAIUNIONS/XXXXXXXX")
+[[ "$HAI_UNION" ]] && mkdir -p "$HAI_UNION"
+[[ -z "$HAI_UNION" ]] && mkdir -p "$HAIUNIONS" && HAI_UNION=$(mktemp -d "$HAIUNIONS/XXXXXXXX")
 
 set +e
 unionfs -o cow "${selection//:/=ro:}/=rw" "$HAI_UNION"; result=$?
 
-if [[ "$result" != 0 ]]]; then
-  [[ -z "$HAI_KEEP_UNION" ]]] && rmdir "$HAI_UNION"
+if [[ "$result" != 0 ]]; then
+  [[ -z "$HAI_KEEP_UNION" ]] && rmdir "$HAI_UNION"
   exit $result
 fi
 
@@ -61,7 +61,7 @@ export FAKECHROOT_EXCLUDE_PATH
 # TODO using 'sh' for this is ugly (and sh isn't guaranteed to work in the chroot)
 LD_LIBRARY_PATH+="$HAIBOOTSTRAP" fakechroot -- chroot "$HAI_UNION" sh -c 'cd "$1"; shift; exec "$@"' - "$PWD" "$@"; result=$?
 sleep .2   # workaround that attempts to reduce 'device is busy' errors
-if [[ -z "$HAI_KEEP_UNION" ]]]; then
+if [[ -z "$HAI_KEEP_UNION" ]]; then
   fusermount -u "$HAI_UNION"
   rmdir "$HAI_UNION"
 fi

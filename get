@@ -3,7 +3,7 @@ set -e
 shopt -s nullglob
 
 source "${HAICONFIG:-$(dirname "$0")/config}"
-[[ -r "$HAI/config" ]]] && source "$HAI/config"
+[[ -r "$HAI/config" ]] && source "$HAI/config"
 
 # usage: get <request> <already-selected>
 # output: a directory path with the package's unpacked contents
