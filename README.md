@@ -24,7 +24,7 @@ Some programs HAI uses aren't commonly installed:
 Because the point of `hai` is avoiding changes to the local system, you can
 use `bootstrap` to install these programs into `~/.hai/bootstrap`. It won't do
 anything if you already have them. (You need FUSE and its header files to
-compile unionfs-fuse, though.)
+compile unionfs-fuse, though. And obviously a compiler.)
 
 ## Usage ##
 
