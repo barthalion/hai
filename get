@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-set -e
+#!/usr/bin/env bash -e
 shopt -s nullglob
 
 source "${HAICONFIG:-$(dirname "$0")/config}"
@@ -18,7 +17,7 @@ requestver=${requestver:${#requestcmp}}
 
 version-ok () {
   [[ "$requestver" ]] || return 0
-  expr "`vercmp "$1" "$requestver"`" "$requestcmp" 0 >/dev/null || return 1
+  expr "$(vercmp "$1" "$requestver")" "$requestcmp" 0 >/dev/null || return 1
 }
 
 filename-ok () {
@@ -165,4 +164,3 @@ DOWNLOAD_STRATEGIES
 echo
 echo "get: $request: package not found"
 exit 1
-
