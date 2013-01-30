@@ -1,12 +1,11 @@
-
 # directories containing HAI data
-# HAI: base directory
-# HAILOCAL: override directory for user-provided packages
-# HAISYNC: information on which versions are considered up-to-date
-# HAISYNCBAK: the old sync (if it needs to be restored)
-# HAICACHE: cache for downloaded and built packages
-# HAIUNIONS: where temporary union mounts are created
-# HAIBOOTSTRAP: binaries that HAI needs but aren't installed locally
+#   HAI: base directory
+#   HAILOCAL: override directory for user-provided packages
+#   HAISYNC: information on which versions are considered up-to-date
+#   HAISYNCBAK: the old sync (if it needs to be restored)
+#   HAICACHE: cache for downloaded and built packages
+#   HAIUNIONS: where temporary union mounts are created
+#   HAIBOOTSTRAP: binaries that HAI needs but aren't installed locally
 HAI=$HOME/.hai
 HAILOCAL=$HAI/local
 HAISYNC=$HAI/sync
@@ -16,7 +15,7 @@ HAIUNIONS=$HAI/unions
 HAIBOOTSTRAP=$HAI/bootstrap
 
 # this adds HAIBOOTSTRAP to PATH for all HAI scripts
-[ -d "$HAIBOOTSTRAP" ] && PATH=$HAIBOOTSTRAP:$PATH
+[[ -d "$HAIBOOTSTRAP" ]] && PATH=$HAIBOOTSTRAP:$PATH
 
 # files in these directories won't go through the union filesystem
 FAKECHROOT_EXCLUDE_PATH=/dev:/proc:/sys
@@ -24,16 +23,15 @@ FAKECHROOT_EXCLUDE_PATH=/dev:/proc:/sys
 # packages that pass this are considered already installed in the system
 # (so HAI doesn't try the other DOWNLOAD_STRATEGIES).
 # change this when using HAI on distros other than Arch Linux.
-SYSTEM_CHECK='[ -z "`pacman -T "$request"`" ]'
+SYSTEM_CHECK='[[ -z "$(pacman -T "$request")" ]]'
 
 # the exceptions for SYSTEM_CHECK:
-# !package          - pretend package isn't installed in the system
-# package=version   - pretend this version of package is installed
-# package           - pretend package is installed in the system and
+#   !package          - pretend package isn't installed in the system
+#   package=version   - pretend this version of package is installed
+#   package           - pretend package is installed in the system and
 #                     never needs to be downloaded or built
-# package:otherpkg  - check for otherpkg's presence instead of package's
+#   package:otherpkg  - check for otherpkg's presence instead of package's
 # for example: SYSTEM_OVERRIDE="glibc freetype2:libfreetype6 !wget"
-# we use += so the value from the environment is used as well
 SYSTEM_OVERRIDE+=""
 
 # before downloading a package, check if it isn't in here
